@@ -203,7 +203,7 @@ export default {
 
 h1 {
   font-size: 2rem;
-  color: #333;
+  color: #007bff;
 }
 
 .form-container {

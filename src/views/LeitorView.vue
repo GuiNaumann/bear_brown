@@ -202,12 +202,25 @@ export default {
 .leitor-view {
   display: flex;
   height: 100vh;
-  background-color: #f9f9f9;
 }
 
 .main-content {
+  margin-left: 280px; /* Compensa a largura da barra lateral */
+  margin-top: -20px;
+  padding: 30px; /* Adiciona espaçamento ao redor do conteúdo */
+  box-sizing: border-box; /* Garante que padding não afeta a largura */
   flex: 1;
-  padding: 20px;
+}
+
+.leitor-view > :first-child {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 250px;
+  height: 100%;
+  background-color: #f5f5f5;
+  z-index: 1000;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 }
 
 .header {
@@ -217,7 +230,7 @@ export default {
 
 .header .title {
   font-size: 2.2rem;
-  color: #333;
+  color: #007bff;
   font-weight: bold;
   text-align: left;
 }

@@ -216,13 +216,8 @@ export default {
 .title {
   font-size: 2.5rem;
   font-weight: bold;
-  color: #333;
+  color: #007bff;
   text-align: left;
-}
-
-.subtitle {
-  font-size: 1rem;
-  color: #555;
 }
 
 /* Filtros */

@@ -124,6 +124,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  color: #007bff;
 }
 
 .create-button {
