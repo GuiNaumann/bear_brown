@@ -1,15 +1,12 @@
 <template>
   <div class="dashboard-container">
-    <!-- Barra lateral -->
+    <!-- Barra lateral fixa -->
     <AppSidebar :user="user || placeholderUser" currentSection="Dashboard" />
 
     <!-- Conteúdo principal -->
     <main class="main-content">
       <!-- Cabeçalho -->
-      <header class="header">
-        <h1>Dashboard</h1>
-        <p>Visão geral dos dados e informações</p>
-      </header>
+        <h1 class="title">Dashboard</h1>
 
       <!-- Filtros de Data -->
       <section class="date-filters">
@@ -33,7 +30,7 @@
 
       <!-- Gráfico de Vendas -->
       <section class="chart-section">
-        <h3>Quantidade de Vendas</h3>
+        <h3 class="section-title">Quantidade de Vendas</h3>
         <canvas id="salesChart"></canvas>
       </section>
 
@@ -41,7 +38,7 @@
       <section class="lists-section">
         <!-- Produtos Mais Vendidos -->
         <div class="list-container">
-          <h3>Produtos Mais Vendidos</h3>
+          <h3 class="section-title">Produtos Mais Vendidos</h3>
           <ul>
             <li v-for="(product, index) in topSellingProducts" :key="index">
               {{ product.name }} - {{ product.quantity }} unidades
@@ -51,7 +48,7 @@
 
         <!-- Vendas Recentes -->
         <div class="list-container">
-          <h3>Vendas Recentes</h3>
+          <h3 class="section-title">Vendas Recentes</h3>
           <ul>
             <li v-for="(sale, index) in recentSales" :key="index">
               {{ sale.customer }} - {{ sale.total }} R$
@@ -78,7 +75,6 @@ export default {
         name: "Usuário Genérico",
         photo: "/generico.png",
       },
-      // Valores padrão dos 6 quadrados
       dashboardData: [
         { title: "Produtos cadastrados", value: 0 },
         { title: "Qtd produtos vendidos", value: 0 },
@@ -87,11 +83,11 @@ export default {
         { title: "Valor de produtos vendidos", value: 0 },
         { title: "Valor de estoque", value: 0 },
       ],
-      topSellingProducts: [], // Lista de produtos mais vendidos
-      recentSales: [],        // Lista de vendas recentes
-      startDate: "",          // Filtro de data inicial
-      endDate: "",            // Filtro de data final
-      salesChart: null,       // Gráfico de vendas
+      topSellingProducts: [],
+      recentSales: [],
+      startDate: "",
+      endDate: "",
+      salesChart: null,
     };
   },
   methods: {
@@ -101,7 +97,6 @@ export default {
         const response = await axios.get("http://seu-endpoint/api/dashboard", { params });
         const data = response.data || {};
 
-        // Preenche os cards com fallback para 0
         this.dashboardData = [
           { title: "Produtos cadastrados", value: data.productsRegistered || 0 },
           { title: "Qtd produtos vendidos", value: data.productsSold || 0 },
@@ -111,16 +106,12 @@ export default {
           { title: "Valor de estoque", value: data.stockValue || 0 },
         ];
 
-        // Preenche as listagens com fallback vazio
         this.topSellingProducts = data.topSellingProducts || [];
         this.recentSales = data.recentSales || [];
-
-        // Busca os dados do gráfico
         this.fetchSalesData();
       } catch (error) {
         console.error("Erro ao buscar dados do Dashboard:", error);
 
-        // Mantém os valores padrão caso haja erro
         this.dashboardData = [
           { title: "Produtos cadastrados", value: 0 },
           { title: "Qtd produtos vendidos", value: 0 },
@@ -132,11 +123,10 @@ export default {
 
         this.topSellingProducts = [];
         this.recentSales = [];
-        this.renderSalesChart([], []); // Gráfico vazio
+        this.renderSalesChart([], []);
       }
     },
 
-    // Buscar dados do gráfico
     async fetchSalesData() {
       try {
         const response = await axios.get("http://seu-endpoint/api/sales-quantity");
@@ -148,11 +138,10 @@ export default {
         this.renderSalesChart(labels, values);
       } catch (error) {
         console.error("Erro ao buscar dados do gráfico:", error);
-        this.renderSalesChart([], []); // Gráfico vazio
+        this.renderSalesChart([], []);
       }
     },
 
-    // Renderizar o gráfico
     renderSalesChart(labels, values) {
       const ctx = document.getElementById("salesChart");
 
@@ -177,7 +166,7 @@ export default {
         options: {
           responsive: true,
           scales: {
-            y: { beginAtZero: true },
+            y: {beginAtZero: true},
           },
         },
       });
@@ -193,35 +182,59 @@ export default {
 .dashboard-container {
   display: flex;
   height: 100vh;
-  background-color: #f8f9fa;
 }
 
 .main-content {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
+  margin-left: 250px; /* Compensa a largura da barra lateral */
+  margin-top: -150px;
+  padding: 150px; /* Adiciona espaçamento ao redor do conteúdo */
+  box-sizing: border-box; /* Garante que padding não afeta a largura */
+}
+
+/* Barra lateral fixa */
+.dashboard-container > :first-child {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 250px;
+  height: 100%;
+  background-color: #f5f5f5;
+  z-index: 1000;
+}
+
+/* Espaço reservado para barra lateral */
+.main-content {
+  margin-left: 250px;
 }
 
 /* Cabeçalho */
 .header {
-  text-align: center;
   margin-bottom: 20px;
+  padding: 10px 20px;
 }
 
-.header h1 {
+.title {
   font-size: 2.5rem;
+  font-weight: bold;
   color: #333;
+  text-align: left;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: #555;
 }
 
 /* Filtros */
 .date-filters {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 20px;
   margin-bottom: 20px;
-  background-color: #e9ecef;
-  padding: 15px;
-  border-radius: 8px;
+  padding: 10px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* Cards */
@@ -229,11 +242,12 @@ export default {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+  margin-bottom: 20px;
 }
 
 .card {
-  background-color: white;
   padding: 20px;
+  background: white;
   border-radius: 10px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   text-align: center;
@@ -241,47 +255,33 @@ export default {
 
 /* Gráfico */
 .chart-section {
-  margin-top: 30px;
-  background-color: white;
+  margin-top: 20px;
+  background: white;
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  text-align: center;
+}
+
+.section-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #333;
+  text-align: left;
+  margin-bottom: 10px;
 }
 
 /* Listagens */
 .lists-section {
   display: flex;
-  justify-content: space-between;
   gap: 20px;
-  margin-top: 30px;
+  margin-top: 20px;
 }
 
 .list-container {
   flex: 1;
-  background-color: white;
+  background: white;
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.list-container h3 {
-  margin-bottom: 10px;
-  color: #007bff;
-  font-size: 1.5rem;
-}
-
-.list-container ul {
-  list-style: none;
-  padding: 0;
-}
-
-.list-container li {
-  padding: 8px 0;
-  border-bottom: 1px solid #ddd;
-}
-
-.list-container li:last-child {
-  border-bottom: none;
 }
 </style>
