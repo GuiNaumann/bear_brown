@@ -7,7 +7,7 @@
     <main class="main-content">
       <!-- Cabeçalho -->
       <div class="header">
-        <h1>Leitor de Produtos</h1>
+        <h1 class="title">Leitor de Produtos</h1>
       </div>
 
       <!-- Área de Leitura -->
@@ -202,6 +202,7 @@ export default {
 .leitor-view {
   display: flex;
   height: 100vh;
+  background-color: #f9f9f9;
 }
 
 .main-content {
@@ -210,8 +211,15 @@ export default {
 }
 
 .header {
-  text-align: center;
   margin-bottom: 20px;
+  padding: 10px 20px;
+}
+
+.header .title {
+  font-size: 2.2rem;
+  color: #333;
+  font-weight: bold;
+  text-align: left;
 }
 
 .reader-options {
@@ -236,6 +244,8 @@ export default {
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
 }
 
 .reader-button:hover {
@@ -249,6 +259,7 @@ export default {
   padding: 10px 20px;
   border-radius: 8px;
   cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
 .stop-button:hover {
@@ -262,6 +273,21 @@ export default {
   margin-top: 20px;
 }
 
+.qr-container {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.qr-container.detected {
+  border-color: #00ff00;
+  box-shadow: 0 0 10px 4px rgba(0, 255, 0, 0.6);
+}
+
 .qr-overlay {
   position: absolute;
   top: 50%;
@@ -273,29 +299,31 @@ export default {
   pointer-events: none;
 }
 
-.qr-container {
-  position: relative;
-  width: 300px;
-  height: 300px;
-  border: 2px solid #ddd; /* Cor padrão */
-  border-radius: 10px;
-  overflow: hidden;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+.results {
+  margin-top: 20px;
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.qr-container.detected {
-  border-color: #00ff00; /* Verde */
-  box-shadow: 0 0 10px 4px rgba(0, 255, 0, 0.6);
+.results h2 {
+  text-align: center;
+  margin-bottom: 10px;
+  color: #333;
 }
 
-.qr-overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 150px;
-  height: 150px;
-  border: 2px dashed rgba(0, 255, 0, 0.7); /* Verde semitransparente */
-  transform: translate(-50%, -50%);
-  pointer-events: none;
+.results ul {
+  list-style: none;
+  padding: 0;
+}
+
+.results li {
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
+}
+
+.results li:last-child {
+  border-bottom: none;
 }
 </style>
