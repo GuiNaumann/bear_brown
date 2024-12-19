@@ -39,16 +39,35 @@
         </li>
       </ul>
     </nav>
+
+    <!-- Botão de Logout -->
+    <button class="logout-button" @click="handleLogout">Sair</button>
   </aside>
 </template>
 
 <script>
+import axios from "axios";
+
 export default {
   name: "AppSidebar",
   props: {
     user: {
       type: Object,
       required: true,
+    },
+  },
+  methods: {
+    async handleLogout() {
+      try {
+        // Chama o endpoint de logout
+        await axios.post("http://localhost:8080/logout", {}, { withCredentials: true });
+
+        // Redireciona para a página de login
+        this.$router.push("/login");
+      } catch (error) {
+        console.error("Erro ao fazer logout:", error);
+        alert("Erro ao fazer logout. Tente novamente.");
+      }
     },
   },
 };
@@ -136,5 +155,23 @@ export default {
   background: rgba(255, 255, 255, 0.2);
   font-weight: bold;
   transform: scale(1.05);
+}
+
+.logout-button {
+  margin-top: 400px;
+  padding: 10px 20px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 100%;
+  font-size: 16px;
+  text-align: center;
+  transition: background 0.3s ease;
+}
+
+.logout-button:hover {
+  background-color: #d32f2f;
 }
 </style>

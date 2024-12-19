@@ -55,8 +55,10 @@ export default {
     // Busca os itens do endpoint
     async fetchItems() {
       try {
-        const response = await axios.get("http://localhost:8080/private/product/list");
-        this.items = response.data; // Preenche a lista de itens com os dados da API
+        const response = await axios.get("http://localhost:8080/private/product/list", {
+          withCredentials: true,
+        });
+        this.items = response.data;
       } catch (error) {
         console.error("Erro ao buscar itens:", error);
       }

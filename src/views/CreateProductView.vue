@@ -160,6 +160,17 @@ export default {
     getImagePreview(file) {
       return URL.createObjectURL(file);
     },
+
+    // Função para converter a imagem para base64
+    async convertFileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file); // Lê o arquivo como uma URL base64
+      });
+    },
+
     async handleSubmit() {
       if (!this.product.name || !this.product.quantity || !this.product.price) {
         this.errorMessage = "Preencha os campos obrigatórios!";
@@ -170,16 +181,24 @@ export default {
       this.errorMessage = "";
 
       try {
+        // Converte a primeira imagem para base64
+        let imageBase64 = null;
+        if (this.images.length > 0) {
+          imageBase64 = await this.convertFileToBase64(this.images[0]);
+        }
+
         const payload = {
           name: this.product.name,
           quantity: this.product.quantity,
           price: this.product.price,
           size: this.product.size,
           description: this.product.description,
-          images: this.images.map((file) => file.name),
+          imageBase64, // Inclui a imagem em base64
         };
 
-        await axios.post("https://seu-servidor.com/create/product", payload);
+        await axios.post("http://localhost:8080/private/product/create", payload, {
+          withCredentials: true, // Permite envio de cookies
+        });
         alert("Produto cadastrado com sucesso!");
 
         this.product = { name: "", quantity: null, price: null, size: "", description: "" };
