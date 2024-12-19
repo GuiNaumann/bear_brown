@@ -79,7 +79,9 @@ export default {
   methods: {
     async fetchUserInformation() {
       try {
-        const response = await axios.get("http://seu-endpoint/api/personalInformation");
+        const response = await axios.get("http://localhost:8080/personalInformation", {
+          withCredentials: true, // Permite envio de cookies
+        });
         this.user = {
           name: response.data.name || "Usuário Genérico",
           photo: response.data.image || "/generico.png",
@@ -173,7 +175,7 @@ export default {
 
     async fetchAndAddProduct(code, type) {
       try {
-        const response = await axios.post("http://seu-endpoint/api/read-product", { code, type });
+        const response = await axios.post("http://localhost:8080/private/read-product", { code, type });
         const product = response.data.product;
 
         if (product) {

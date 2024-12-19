@@ -56,6 +56,7 @@
 <script>
 import { reactive, ref } from "vue";
 import { loginUser } from "@/services/authService";
+import router from "@/router"; // Importe o roteador Vue
 
 export default {
   name: "LoginView",
@@ -72,9 +73,7 @@ export default {
       showPassword.value = !showPassword.value;
     };
 
-    const cleanCPF = (cpf) => {
-      return cpf.replace(/\D/g, ""); // Remove todos os caracteres não numéricos
-    };
+    const cleanCPF = (cpf) => cpf.replace(/\D/g, ""); // Remove caracteres não numéricos
 
     const isEmail = (value) => {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -99,14 +98,18 @@ export default {
     const handleLogin = async () => {
       if (!validateLoginField()) return;
 
-      if (isCPF(form.login)) {
-        form.login = cleanCPF(form.login); // Limpa CPF antes de enviar ao backend
-      }
-
       try {
+        // Converte CPF (se necessário)
+        if (isCPF(form.login)) form.login = cleanCPF(form.login);
+
+        // Chama o serviço de login
         const response = await loginUser(form);
-        console.log("Login bem-sucedido:", response);
-        errorMessage.value = null; // Limpa mensagens de erro em caso de sucesso
+
+        // Salva o token retornado no localStorage
+        localStorage.setItem("token", response.token);
+
+        // Redireciona para a rota da Dashboard
+        router.push({ name: "Dashboard" });
       } catch (error) {
         errorMessage.value =
             error.response?.data?.message ||
@@ -123,7 +126,6 @@ export default {
     };
   },
 };
-
 </script>
 
 <style scoped>

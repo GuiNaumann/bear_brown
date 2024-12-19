@@ -124,7 +124,10 @@ export default {
   data() {
     return {
       user: null,
-      placeholderUser: { name: "Usuário Genérico", photo: "/generico.png" },
+      placeholderUser: {
+        name: "Usuário Genérico",
+        photo: "/generico.png"
+      },
       product: { name: "", quantity: null, price: null, size: "", description: "" },
       sizes: ["PP", "P", "M", "G", "GG", "XG", "XGG"],
       images: [],
@@ -133,6 +136,21 @@ export default {
     };
   },
   methods: {
+    async fetchUserInformation() {
+      try {
+        const response = await axios.get("http://localhost:8080/personalInformation", {
+          withCredentials: true, // Permite envio de cookies
+        });
+        this.user = {
+          name: response.data.name || "Usuário Genérico",
+          photo: response.data.image || "/generico.png",
+        };
+      } catch (error) {
+        console.error("Erro ao buscar informações pessoais:", error);
+        this.user = this.placeholderUser;
+      }
+    },
+
     handleImageUpload(event) {
       this.images = Array.from(event.target.files);
     },
@@ -179,6 +197,7 @@ export default {
     },
   },
   mounted() {
+    this.fetchUserInformation();
     this.user = this.placeholderUser;
   },
 };

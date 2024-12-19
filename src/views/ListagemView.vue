@@ -55,7 +55,7 @@ export default {
     // Busca os itens do endpoint
     async fetchItems() {
       try {
-        const response = await axios.get("http://seu-endpoint/api/product");
+        const response = await axios.get("http://localhost:8080/private/product/list");
         this.items = response.data; // Preenche a lista de itens com os dados da API
       } catch (error) {
         console.error("Erro ao buscar itens:", error);
@@ -64,18 +64,16 @@ export default {
     // Busca as informações pessoais do usuário no endpoint
     async fetchUserInformation() {
       try {
-        const response = await axios.get("http://seu-endpoint/api/personalInformation");
-
-        // Garante que o usuário tenha uma imagem válida, caso contrário usa a genérica
-        const userPhoto = response.data.image || "/generico.png";
-
+        const response = await axios.get("http://localhost:8080/personalInformation", {
+          withCredentials: true, // Permite envio de cookies
+        });
         this.user = {
-          name: response.data.name,
-          photo: userPhoto,
+          name: response.data.name || "Usuário Genérico",
+          photo: response.data.image || "/generico.png",
         };
       } catch (error) {
         console.error("Erro ao buscar informações pessoais:", error);
-        this.user = this.placeholderUser; // Usa o placeholder em caso de erro
+        this.user = this.placeholderUser;
       }
     },
     // Lógica para criar um novo item
@@ -91,7 +89,7 @@ export default {
       const confirmDelete = confirm("Deseja realmente excluir este item?");
       if (confirmDelete) {
         try {
-          await axios.delete(`http://seu-endpoint/api/product/${id}`);
+          await axios.delete(`http://localhost:8080/private/product/${id}`);
           this.items = this.items.filter((item) => item.id !== id); // Remove o item da lista local
         } catch (error) {
           console.error("Erro ao excluir item:", error);

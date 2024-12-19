@@ -91,10 +91,25 @@ export default {
     };
   },
   methods: {
+    async fetchUserInformation() {
+      try {
+        const response = await axios.get("http://localhost:8080/personalInformation", {
+          withCredentials: true, // Permite envio de cookies
+        });
+        this.user = {
+          name: response.data.name || "Usuário Genérico",
+          photo: response.data.image || "/generico.png",
+        };
+      } catch (error) {
+        console.error("Erro ao buscar informações pessoais:", error);
+        this.user = this.placeholderUser;
+      }
+    },
+
     async fetchDashboardData() {
       try {
         const params = { startDate: this.startDate, endDate: this.endDate };
-        const response = await axios.get("http://seu-endpoint/api/dashboard", { params });
+        const response = await axios.get("http://localhost:8080/private/dashboard", { params });
         const data = response.data || {};
 
         this.dashboardData = [
@@ -129,7 +144,7 @@ export default {
 
     async fetchSalesData() {
       try {
-        const response = await axios.get("http://seu-endpoint/api/sales-quantity");
+        const response = await axios.get("http://localhost:8080/private/sales-quantity");
         const salesData = response.data || [];
 
         const labels = salesData.map((item) => item.date);
@@ -173,6 +188,7 @@ export default {
     },
   },
   mounted() {
+    this.fetchUserInformation();
     this.fetchDashboardData();
   },
 };

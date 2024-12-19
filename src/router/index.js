@@ -48,18 +48,18 @@ const router = createRouter({
 });
 
 // Middleware para proteger rotas privadas
-// router.beforeEach((to, from, next) => {
-//     const isAuthenticated = localStorage.getItem("token"); // Simulação de autenticação
-//     if (to.name !== "Login" && !isAuthenticated) {
-//         next({ name: "Login" }); // Redireciona para Login se não autenticado
-//     } else {
-//         next(); // Caso contrário, permite o acesso
-//     }
-// });
-
 router.beforeEach((to, from, next) => {
-    // Removendo a verificação temporariamente para testes
-    next();
+    const isAuthenticated = localStorage.getItem("token"); // Simulação de autenticação
+    if (to.name !== "Login" && !isAuthenticated) {
+        next({ name: "Login" }); // Redireciona para Login se não autenticado
+    } else {
+        next(); // Caso contrário, permite o acesso
+    }
 });
+
+// router.beforeEach((to, from, next) => {
+//     // Removendo a verificação temporariamente para testes
+//     next();
+// });
 
 export default router;
