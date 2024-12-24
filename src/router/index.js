@@ -3,7 +3,9 @@ import LoginView from "@/views/auth/LoginView.vue";
 import ListagemView from "@/views/ListagemView.vue";
 import DashboardView from "@/views/DashboardView.vue"; // Nova tela para Dashboard
 import LeitorView from "@/views/LeitorView.vue"; // Nova tela para Leitor
+import EditProductView from '@/views/EditProductView.vue';
 import CreateProductView from "@/views/CreateProductView.vue";
+
 
 
 const routes = [
@@ -11,14 +13,11 @@ const routes = [
         path: "/", // Caminho da raiz
         redirect: "/login", // Redireciona para /login
     },
-
-    // Rota pública (Login)
     {
         path: "/login",
         name: "Login",
         component: LoginView,
     },
-
     // Rotas privadas
     {
         path: "/dashboard",
@@ -34,6 +33,12 @@ const routes = [
         path: "/produtos/cadastrar",
         name: "CreateProduct",
         component: CreateProductView,
+    },
+    {
+        path: "/produtos/editar/:id",
+        name: "EditProduct",
+        component: EditProductView,
+        props: true,
     },
     {
         path: "/leitor",

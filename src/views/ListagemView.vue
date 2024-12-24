@@ -11,7 +11,9 @@
       </div>
       <div class="product-grid">
         <div v-for="item in items" :key="item.id" class="product-card">
-          <img :src="item.imageURL" alt="Produto" class="product-image" />
+          <div class="image-container">
+            <img :src="item.imageURL" alt="Produto" class="product-image" />
+          </div>
           <div class="product-info">
             <h2 class="product-name">{{ item.name }}</h2>
             <p class="product-description">{{ item.description }}</p>
@@ -53,7 +55,6 @@ export default {
         const response = await axios.get("http://localhost:8080/private/product/list", {
           withCredentials: true,
         });
-        // Acesse a propriedade "items" da resposta
         this.items = response.data.items.map(item => ({
           ...item,
           price: item.price ?? 0, // Define preço como 0 se não estiver definido
@@ -62,7 +63,6 @@ export default {
         console.error("Erro ao buscar itens:", error);
       }
     },
-    // Busca as informações pessoais do usuário no endpoint
     async fetchUserInformation() {
       try {
         const response = await axios.get("http://localhost:8080/personalInformation", {
@@ -81,21 +81,21 @@ export default {
       this.$router.push("/produtos/cadastrar");
     },
     async handleEdit(id) {
-      console.log("Editar item:", id);
+      this.$router.push({ name: "EditProduct", params: { id } });
     },
     async handleDelete(id) {
       const confirmDelete = confirm("Deseja realmente excluir este item?");
       if (confirmDelete) {
         try {
           await axios.delete(`http://localhost:8080/private/product/delete/${id}`, {
-            withCredentials: true, // Certifique-se de enviar os cookies
+            withCredentials: true,
           });
           this.items = this.items.filter((item) => item.id !== id);
         } catch (error) {
           console.error("Erro ao excluir item:", error.response || error.message);
         }
       }
-    }
+    },
   },
   mounted() {
     this.fetchItems();
@@ -158,10 +158,18 @@ export default {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
 }
 
+.image-container {
+  height: 200px; /* Tamanho fixo */
+  background: #f0f0f0; /* Fundo neutro para imagens ausentes */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .product-image {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain; /* Mantém a proporção sem cortes */
 }
 
 .product-info {
