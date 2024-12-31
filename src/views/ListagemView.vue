@@ -29,6 +29,17 @@
         </div>
       </div>
       <p v-if="!items.length" class="no-products">Nenhum produto encontrado.</p>
+
+      <!-- Paginação -->
+      <div class="pagination" v-if="totalCount > itemsPerPage">
+        <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)">
+          Anterior
+        </button>
+        <span>Página {{ currentPage }} de {{ totalPages }}</span>
+        <button :disabled="currentPage === totalPages" @click="changePage(currentPage + 1)">
+          Próximo
+        </button>
+      </div>
     </main>
   </div>
 </template>
@@ -47,18 +58,32 @@ export default {
         photo: "/generico.png",
       },
       items: [],
+      totalCount: 0, // Total de itens
+      currentPage: 1, // Página atual
+      itemsPerPage: 30, // Quantidade de itens por página
     };
   },
+  computed: {
+    totalPages() {
+      return Math.ceil(this.totalCount / this.itemsPerPage);
+    },
+  },
   methods: {
-    async fetchItems() {
+    async fetchItems(page = 1) {
       try {
         const response = await axios.get("http://localhost:8080/private/product/list", {
+          params: {
+            page,
+            limit: this.itemsPerPage,
+          },
           withCredentials: true,
         });
-        this.items = response.data.items.map(item => ({
+        this.items = response.data.items.map((item) => ({
           ...item,
           price: item.price ?? 0, // Define preço como 0 se não estiver definido
         }));
+        this.totalCount = response.data.totalCount; // Atualiza o total de itens
+        this.currentPage = page; // Define a página atual
       } catch (error) {
         console.error("Erro ao buscar itens:", error);
       }
@@ -90,21 +115,27 @@ export default {
           await axios.delete(`http://localhost:8080/private/product/delete/${id}`, {
             withCredentials: true,
           });
-          this.items = this.items.filter((item) => item.id !== id);
+          this.fetchItems(this.currentPage); // Recarrega os itens da página atual
         } catch (error) {
           console.error("Erro ao excluir item:", error.response || error.message);
         }
       }
     },
+    changePage(page) {
+      if (page > 0 && page <= this.totalPages) {
+        this.fetchItems(page);
+      }
+    },
   },
   mounted() {
-    this.fetchItems();
+    this.fetchItems(this.currentPage);
     this.fetchUserInformation();
   },
 };
 </script>
 
 <style scoped>
+/* Estilos atualizados */
 .dashboard {
   display: flex;
   height: 100vh;
@@ -159,8 +190,8 @@ export default {
 }
 
 .image-container {
-  height: 200px; /* Tamanho fixo */
-  background: #f0f0f0; /* Fundo neutro para imagens ausentes */
+  height: 200px;
+  background: #f0f0f0;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -169,7 +200,7 @@ export default {
 .product-image {
   max-width: 100%;
   max-height: 100%;
-  object-fit: contain; /* Mantém a proporção sem cortes */
+  object-fit: contain;
 }
 
 .product-info {
@@ -231,9 +262,30 @@ export default {
   background: #c82333;
 }
 
-.no-products {
-  text-align: center;
+.pagination {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+.pagination button {
+  padding: 8px 12px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.pagination span {
   font-size: 16px;
-  color: #666;
+  color: #333;
 }
 </style>

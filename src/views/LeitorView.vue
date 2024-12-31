@@ -29,7 +29,7 @@
       </div>
 
       <!-- Leitor de QR Code -->
-      <div v-show="showQRCodeReader" class="viewport">
+      <div v-show="showQRCodeReader" class="qr-reader-container">
         <div id="qr-reader" class="qr-container" :class="{ 'detected': qrDetected }">
           <div class="qr-overlay"></div>
         </div>
@@ -41,12 +41,20 @@
       <!-- Lista de Resultados -->
       <div class="results">
         <h2>Produtos Lidos</h2>
-        <ul>
-          <li v-for="(product, index) in products" :key="index">
-            {{ product.name }} - {{ product.code }} - {{ product.quantity }} unidades
-          </li>
-        </ul>
-        <p v-if="!products.length">Nenhum produto encontrado. Bip um código!</p>
+        <div v-if="products.length" class="product-grid">
+          <div v-for="product in products" :key="product.id" class="product-card">
+            <img :src="product.imageURL" alt="Imagem do Produto" class="product-image" />
+            <div class="product-info">
+              <h2 class="product-name">{{ product.name }}</h2>
+              <p class="product-description">{{ product.description }}</p>
+              <p class="product-quantity">Quantidade: {{ product.quantity }}</p>
+              <button @click="removeProduct(product.id)" class="remove-button">
+                Remover
+              </button>
+            </div>
+          </div>
+        </div>
+        <p v-else class="no-products">Nenhum produto encontrado. Bip um código!</p>
       </div>
     </main>
   </div>
@@ -68,19 +76,19 @@ export default {
         photo: "/generico.png",
       },
       barcodeInput: "",
-      showQRCodeReader: false,
       products: [],
+      showQRCodeReader: false,
       qrCodeScanner: null,
-      isReading: false, // Bloqueia leitura por 3 segundos
-      bipAudio: new Audio("/bip.wav"), // Som do bip
-      qrDetected: false, // Controla a borda verde
+      isReading: false,
+      bipAudio: new Audio("/bip.wav"),
+      qrDetected: false,
     };
   },
   methods: {
     async fetchUserInformation() {
       try {
         const response = await axios.get("http://localhost:8080/personalInformation", {
-          withCredentials: true, // Permite envio de cookies
+          withCredentials: true,
         });
         this.user = {
           name: response.data.name || "Usuário Genérico",
@@ -94,17 +102,58 @@ export default {
 
     async handleBarcodeInput() {
       if (this.barcodeInput.trim() && !this.isReading) {
-        this.isReading = true; // Bloqueia nova leitura
+        this.isReading = true;
         const code = this.barcodeInput.trim();
-        this.bipAudio.play(); // Reproduz o som
-        await this.fetchAndAddProduct(code, "barcode");
+        this.bipAudio.play();
+        await this.addProductToList(code, "barcode");
         this.barcodeInput = "";
+        await this.fetchProducts();
 
         setTimeout(() => {
-          this.isReading = false; // Desbloqueia leitura após 3 segundos
+          this.isReading = false;
         }, 2000);
       }
     },
+
+    async addProductToList(code, type) {
+      try {
+        await axios.post(
+            "http://localhost:8080/private/product/read-product",
+            { code, type },
+            { withCredentials: true } // Inclui os cookies na solicitação
+        );
+      } catch (error) {
+        console.error("Erro ao adicionar produto à lista:", error);
+        alert("Erro ao adicionar produto à lista.");
+      }
+    },
+
+    async removeProduct(productId) {
+      try {
+        await axios.post(
+            `http://localhost:8080/private/product/read-product/delete/${productId}`,
+            { productId },
+            { withCredentials: true } // Inclui os cookies na solicitação
+        );
+        await this.fetchProducts();
+      } catch (error) {
+        console.error("Erro ao remover produto da lista:", error);
+        alert("Erro ao remover produto.");
+      }
+    },
+
+    async fetchProducts() {
+      try {
+        const response = await axios.get(
+            "http://localhost:8080/private/product/list/read-product",
+            { withCredentials: true } // Inclui os cookies na solicitação
+        );
+        this.products = response.data.items || [];
+      } catch (error) {
+        console.error("Erro ao buscar produtos da lista:", error);
+      }
+    },
+
 
     startQRCodeReader() {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -122,20 +171,11 @@ export default {
               { fps: 10, qrbox: { width: 250, height: 250 } },
               (decodedText) => {
                 if (!this.isReading) {
-                  console.log("QR Code detectado:", decodedText);
-
-                  // Som do bip
                   this.bipAudio.play();
-
-                  // Adiciona o efeito verde
                   this.qrDetected = true;
-
-                  // Envia o código para processamento
-                  this.fetchAndAddProduct(decodedText, "qrcode");
+                  this.addProductToList(decodedText, "qrcode");
 
                   this.isReading = true;
-
-                  // Remove a borda verde após 3 segundos e desbloqueia a leitura
                   setTimeout(() => {
                     this.isReading = false;
                     this.qrDetected = false;
@@ -162,7 +202,6 @@ export default {
               this.qrCodeScanner.clear();
               this.qrCodeScanner = null;
               this.showQRCodeReader = false;
-              console.log("Leitor de QR Code parado com sucesso.");
             })
             .catch((error) => {
               console.warn("Erro ao parar o leitor de QR Code:", error);
@@ -172,30 +211,10 @@ export default {
         this.showQRCodeReader = false;
       }
     },
-
-    async fetchAndAddProduct(code, type) {
-      try {
-        const response = await axios.post("http://localhost:8080/private/read-product", { code, type });
-        const product = response.data.product;
-
-        if (product) {
-          const existingProduct = this.products.find((p) => p.code === product.code);
-          if (existingProduct) {
-            existingProduct.quantity += 1;
-          } else {
-            this.products.push({ ...product, quantity: 1 });
-          }
-        } else {
-          alert("Produto não encontrado ou estoque insuficiente!");
-        }
-      } catch (error) {
-        console.error("Erro ao buscar o produto:", error);
-      }
-    },
   },
-  mounted() {
-    this.fetchUserInformation();
-    this.$refs.barcodeInput?.focus();
+  async mounted() {
+    await this.fetchUserInformation();
+    await this.fetchProducts();
   },
 };
 </script>
@@ -207,47 +226,30 @@ export default {
 }
 
 .main-content {
-  margin-left: 280px; /* Compensa a largura da barra lateral */
-  margin-top: -20px;
-  padding: 30px; /* Adiciona espaçamento ao redor do conteúdo */
-  box-sizing: border-box; /* Garante que padding não afeta a largura */
   flex: 1;
-}
-
-.leitor-view > :first-child {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 250px;
-  height: 100%;
-  background-color: #f5f5f5;
-  z-index: 1000;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .header {
   margin-bottom: 20px;
   padding: 10px 20px;
-}
-
-.header .title {
-  font-size: 2.2rem;
-  color: #007bff;
-  font-weight: bold;
-  text-align: left;
+  background-color: #007bff;
+  color: white;
+  border-radius: 5px;
 }
 
 .reader-options {
   display: flex;
-  justify-content: center;
-  gap: 20px;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
 }
 
 .reader-input {
+  flex: 1;
   padding: 10px;
   font-size: 16px;
-  width: 50%;
   border: 1px solid #ccc;
   border-radius: 5px;
 }
@@ -259,7 +261,6 @@ export default {
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 14px;
   transition: background-color 0.3s ease;
 }
 
@@ -267,21 +268,7 @@ export default {
   background-color: #0056b3;
 }
 
-.stop-button {
-  background-color: #e53e3e;
-  color: white;
-  font-size: 16px;
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.stop-button:hover {
-  background-color: #c53030;
-}
-
-.viewport {
+.qr-reader-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -290,8 +277,8 @@ export default {
 
 .qr-container {
   position: relative;
-  width: 300px;
-  height: 300px;
+  width: 250px;
+  height: 250px;
   border: 2px solid #ddd;
   border-radius: 10px;
   overflow: hidden;
@@ -314,31 +301,64 @@ export default {
   pointer-events: none;
 }
 
-.results {
-  margin-top: 20px;
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.product-card {
   background: white;
-  padding: 15px;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.3s ease;
 }
 
-.results h2 {
-  text-align: center;
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.product-image {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-bottom: 1px solid #eee;
+}
+
+.product-info {
+  padding: 15px;
+}
+
+.product-name {
+  font-size: 18px;
+  font-weight: bold;
   margin-bottom: 10px;
-  color: #333;
 }
 
-.results ul {
-  list-style: none;
-  padding: 0;
+.product-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 10px;
 }
 
-.results li {
-  padding: 10px;
-  border-bottom: 1px solid #ccc;
+.remove-button {
+  padding: 5px 10px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
-.results li:last-child {
-  border-bottom: none;
+.remove-button:hover {
+  background-color: #c82333;
+}
+
+.no-products {
+  text-align: center;
+  color: #666;
+  font-size: 16px;
 }
 </style>
