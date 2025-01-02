@@ -1,98 +1,70 @@
 <template>
   <div class="dashboard">
     <!-- Barra lateral -->
-    <AppSidebar :user="user || placeholderUser" currentSection="Produtos" />
+    <AppSidebar :user="user || placeholderUser" currentSection="Locais" />
 
     <!-- Conteúdo principal -->
     <main class="main-content">
       <div class="header">
-        <h1>Cadastrar Novo Produto</h1>
+        <h1>Cadastrar Novo Local</h1>
       </div>
 
       <!-- Formulário de Cadastro -->
       <div class="form-container">
-        <form @submit.prevent="handleSubmit" class="product-form">
-          <!-- Nome do Produto -->
+        <form @submit.prevent="handleSubmit" class="local-form">
+          <!-- Nome do Local -->
           <div class="form-group">
-            <label for="name">Nome *</label>
+            <label for="name">Nome do Local *</label>
             <input
-                v-model="product.name"
+                v-model="local.name"
                 id="name"
-                placeholder="Digite o nome do produto"
+                placeholder="Digite o nome do local"
                 required
             />
           </div>
 
-          <!-- Quantidade e Preço -->
-          <div class="form-group-inline">
-            <div class="form-group">
-              <label for="quantity">Quantidade *</label>
-              <input
-                  v-model.number="product.quantity"
-                  id="quantity"
-                  type="number"
-                  placeholder="0"
-                  required
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="price">Preço *</label>
-              <input
-                  v-model.number="product.price"
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  required
-              />
-            </div>
+          <!-- Endereço -->
+          <div class="form-group">
+            <label for="address">Endereço *</label>
+            <input
+                v-model="local.address"
+                id="address"
+                placeholder="Digite o endereço do local"
+                required
+            />
           </div>
 
-          <!-- Tamanho -->
-          <div class="form-group">
-            <label for="size">Tamanho</label>
-            <select v-model="product.size" id="size">
-              <option v-for="size in sizes" :key="size" :value="size">
-                {{ size }}
-              </option>
-            </select>
+          <!-- Cidade e Estado -->
+          <div class="form-group-inline">
+            <div class="form-group">
+              <label for="city">Cidade *</label>
+              <input
+                  v-model="local.city"
+                  id="city"
+                  placeholder="Digite a cidade"
+                  required
+              />
+            </div>
+            <div class="form-group">
+              <label for="state">Estado *</label>
+              <select v-model="local.state" id="state" required>
+                <option value="" disabled>Selecione o estado</option>
+                <option v-for="state in states" :key="state" :value="state">
+                  {{ state }}
+                </option>
+              </select>
+            </div>
           </div>
 
           <!-- Descrição -->
           <div class="form-group">
             <label for="description">Descrição</label>
             <textarea
-                v-model="product.description"
+                v-model="local.description"
                 id="description"
                 placeholder="Digite uma descrição"
                 rows="3"
             ></textarea>
-          </div>
-
-          <!-- Upload de Imagens -->
-          <div class="form-group upload-container">
-            <label for="images">Imagens</label>
-            <div class="drop-area" @dragover.prevent @drop="handleDrop">
-              <p>Arraste e solte arquivos aqui ou clique para selecionar</p>
-              <input
-                  type="file"
-                  id="images"
-                  multiple
-                  @change="handleImageUpload"
-                  class="file-input"
-              />
-            </div>
-
-            <div v-if="images.length" class="image-preview-container">
-              <div
-                  class="image-preview"
-                  v-for="(image, index) in images"
-                  :key="index"
-              >
-                <img :src="getImagePreview(image)" alt="Pré-visualização" />
-              </div>
-            </div>
           </div>
 
           <!-- Botões -->
@@ -126,11 +98,10 @@ export default {
       user: null,
       placeholderUser: {
         name: "Usuário Genérico",
-        photo: "/generico.png"
+        photo: "/generico.png",
       },
-      product: { name: "", quantity: null, price: null, size: "", description: "" },
-      sizes: ["PP", "P", "M", "G", "GG", "XG", "XGG"],
-      images: [],
+      local: { name: "", address: "", city: "", state: "", description: "" },
+      states: ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"],
       isLoading: false,
       errorMessage: "",
     };
@@ -151,29 +122,9 @@ export default {
       }
     },
 
-    handleImageUpload(event) {
-      this.images = Array.from(event.target.files);
-    },
-    handleDrop(event) {
-      this.images = Array.from(event.dataTransfer.files);
-    },
-    getImagePreview(file) {
-      return URL.createObjectURL(file);
-    },
-
-    // Função para converter a imagem para base64
-    async convertFileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = (error) => reject(error);
-        reader.readAsDataURL(file); // Lê o arquivo como uma URL base64
-      });
-    },
-
     async handleSubmit() {
-      if (!this.product.name || !this.product.quantity || !this.product.price) {
-        this.errorMessage = "Preencha os campos obrigatórios!";
+      if (!this.local.name || !this.local.address || !this.local.city || !this.local.state) {
+        this.errorMessage = "Preencha todos os campos obrigatórios!";
         return;
       }
 
@@ -181,31 +132,23 @@ export default {
       this.errorMessage = "";
 
       try {
-        // Converte a primeira imagem para base64
-        let imageBase64 = null;
-        if (this.images.length > 0) {
-          imageBase64 = await this.convertFileToBase64(this.images[0]);
-        }
-
         const payload = {
-          name: this.product.name,
-          quantity: this.product.quantity,
-          price: this.product.price,
-          size: this.product.size,
-          description: this.product.description,
-          imageBase64, // Inclui a imagem em base64
+          name: this.local.name,
+          address: this.local.address,
+          city: this.local.city,
+          state: this.local.state,
+          description: this.local.description,
         };
 
-        await axios.post("http://localhost:8080/private/product/create", payload, {
+        await axios.post("http://localhost:8080/private/locais/create", payload, {
           withCredentials: true, // Permite envio de cookies
         });
-        alert("Produto cadastrado com sucesso!");
+        alert("Local cadastrado com sucesso!");
 
-        this.product = { name: "", quantity: null, price: null, size: "", description: "" };
-        this.images = [];
+        this.local = { name: "", address: "", city: "", state: "", description: "" };
         this.$router.push("/produtos");
       } catch (error) {
-        this.errorMessage = "Erro ao cadastrar produto. Tente novamente.";
+        this.errorMessage = "Erro ao cadastrar local. Tente novamente.";
         console.error(error);
       } finally {
         this.isLoading = false;
@@ -217,7 +160,6 @@ export default {
   },
   mounted() {
     this.fetchUserInformation();
-    this.user = this.placeholderUser;
   },
 };
 </script>
@@ -253,7 +195,7 @@ h1 {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-.product-form {
+.local-form {
   display: flex;
   flex-direction: column;
   gap: 20px;

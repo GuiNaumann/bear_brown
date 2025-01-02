@@ -1,60 +1,47 @@
 <template>
-  <div class="leitor-view">
+  <div class="camera-list">
     <!-- Barra lateral -->
-    <AppSidebar :user="user || placeholderUser" currentSection="Leitor" />
+    <AppSidebar :user="user || placeholderUser" currentSection="Câmeras" />
 
     <!-- Conteúdo principal -->
     <main class="main-content">
       <!-- Cabeçalho -->
       <div class="header">
-        <h1 class="title">Leitor de Produtos</h1>
+        <h1 class="title">Listagem de Câmeras</h1>
+        <button class="create-button" @click="handleCreate">Cadastrar Nova Câmera</button>
       </div>
 
-      <!-- Área de Leitura -->
-      <div class="reader-options">
-        <!-- Input para Código de Barras -->
-        <input
-            ref="barcodeInput"
-            type="text"
-            v-model="barcodeInput"
-            @keyup.enter="handleBarcodeInput"
-            placeholder="Passe o código de barras aqui..."
-            class="reader-input"
-        />
-
-        <!-- Botão para abrir Leitor de QR Code -->
-        <button @click="startQRCodeReader" class="reader-button">
-          📷 Leitor de QR Code
-        </button>
+      <!-- Tabela de Câmeras -->
+      <div class="table-container">
+        <table class="camera-table">
+          <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Endereço IP</th>
+            <th>Local</th>
+            <th>Ações</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr v-for="camera in cameras" :key="camera.id">
+            <td>{{ camera.name }}</td>
+            <td>{{ camera.ipAddress }}</td>
+            <td>{{ camera.location }}</td>
+            <td>
+              <button class="edit-button" @click="handleEdit(camera.id)">Editar</button>
+              <button class="delete-button" @click="handleDelete(camera.id)">Excluir</button>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+        <p v-if="!cameras.length" class="no-cameras">Nenhuma câmera cadastrada.</p>
       </div>
 
-      <!-- Leitor de QR Code -->
-      <div v-show="showQRCodeReader" class="qr-reader-container">
-        <div id="qr-reader" class="qr-container" :class="{ 'detected': qrDetected }">
-          <div class="qr-overlay"></div>
-        </div>
-        <button @click="stopQRCodeReader" class="stop-button">
-          Parar Leitor
-        </button>
-      </div>
-
-      <!-- Lista de Resultados -->
-      <div class="results">
-        <h2>Produtos Lidos</h2>
-        <div v-if="products.length" class="product-grid">
-          <div v-for="product in products" :key="product.id" class="product-card">
-            <img :src="product.imageURL" alt="Imagem do Produto" class="product-image" />
-            <div class="product-info">
-              <h2 class="product-name">{{ product.name }}</h2>
-              <p class="product-description">{{ product.description }}</p>
-              <p class="product-quantity">Quantidade: {{ product.quantity }}</p>
-              <button @click="removeProduct(product.id)" class="remove-button">
-                Remover
-              </button>
-            </div>
-          </div>
-        </div>
-        <p v-else class="no-products">Nenhum produto encontrado. Bip um código!</p>
+      <!-- Paginação -->
+      <div class="pagination" v-if="totalCount > itemsPerPage">
+        <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)">Anterior</button>
+        <span>Página {{ currentPage }} de {{ totalPages }}</span>
+        <button :disabled="currentPage === totalPages" @click="changePage(currentPage + 1)">Próximo</button>
       </div>
     </main>
   </div>
@@ -62,11 +49,10 @@
 
 <script>
 import AppSidebar from "@/components/Sidebar.vue";
-import { Html5Qrcode } from "html5-qrcode";
 import axios from "axios";
 
 export default {
-  name: "LeitorView",
+  name: "CameraListView",
   components: { AppSidebar },
   data() {
     return {
@@ -75,16 +61,54 @@ export default {
         name: "Usuário Genérico",
         photo: "/generico.png",
       },
-      barcodeInput: "",
-      products: [],
-      showQRCodeReader: false,
-      qrCodeScanner: null,
-      isReading: false,
-      bipAudio: new Audio("/bip.wav"),
-      qrDetected: false,
+      cameras: [],
+      totalCount: 0, // Total de câmeras cadastradas
+      currentPage: 1, // Página atual
+      itemsPerPage: 10, // Itens por página
     };
   },
+  computed: {
+    totalPages() {
+      return Math.ceil(this.totalCount / this.itemsPerPage);
+    },
+  },
   methods: {
+    async fetchCameras(page = 1) {
+      try {
+        const response = await axios.get("http://localhost:8080/private/camera/list", {
+          params: {
+            page,
+            limit: this.itemsPerPage,
+          },
+          withCredentials: true,
+        });
+        this.cameras = response.data.items || [];
+        this.totalCount = response.data.totalCount || 0;
+        this.currentPage = page;
+      } catch (error) {
+        console.error("Erro ao buscar câmeras:", error);
+        this.cameras = [];
+      }
+    },
+    async handleCreate() {
+      this.$router.push("/cameras/cadastrar");
+    },
+    async handleEdit(cameraId) {
+      this.$router.push({ name: "EditCamera", params: { id: cameraId } });
+    },
+    async handleDelete(cameraId) {
+      const confirmDelete = confirm("Deseja realmente excluir esta câmera?");
+      if (confirmDelete) {
+        try {
+          await axios.delete(`http://localhost:8080/private/camera/delete/${cameraId}`, {
+            withCredentials: true,
+          });
+          await this.fetchCameras(this.currentPage); // Atualiza a listagem
+        } catch (error) {
+          console.error("Erro ao excluir câmera:", error);
+        }
+      }
+    },
     async fetchUserInformation() {
       try {
         const response = await axios.get("http://localhost:8080/personalInformation", {
@@ -99,130 +123,24 @@ export default {
         this.user = this.placeholderUser;
       }
     },
-
-    async handleBarcodeInput() {
-      if (this.barcodeInput.trim() && !this.isReading) {
-        this.isReading = true;
-        const code = this.barcodeInput.trim();
-        this.bipAudio.play();
-        await this.addProductToList(code, "barcode");
-        this.barcodeInput = "";
-        await this.fetchProducts();
-
-        setTimeout(() => {
-          this.isReading = false;
-        }, 2000);
-      }
-    },
-
-    async addProductToList(code, type) {
-      try {
-        await axios.post(
-            "http://localhost:8080/private/product/read-product",
-            { code, type },
-            { withCredentials: true } // Inclui os cookies na solicitação
-        );
-      } catch (error) {
-        console.error("Erro ao adicionar produto à lista:", error);
-        alert("Erro ao adicionar produto à lista.");
-      }
-    },
-
-    async removeProduct(productId) {
-      try {
-        await axios.post(
-            `http://localhost:8080/private/product/read-product/delete/${productId}`,
-            { productId },
-            { withCredentials: true } // Inclui os cookies na solicitação
-        );
-        await this.fetchProducts();
-      } catch (error) {
-        console.error("Erro ao remover produto da lista:", error);
-        alert("Erro ao remover produto.");
-      }
-    },
-
-    async fetchProducts() {
-      try {
-        const response = await axios.get(
-            "http://localhost:8080/private/product/list/read-product",
-            { withCredentials: true } // Inclui os cookies na solicitação
-        );
-        this.products = response.data.items || [];
-      } catch (error) {
-        console.error("Erro ao buscar produtos da lista:", error);
-      }
-    },
-
-
-    startQRCodeReader() {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("Seu navegador não suporta o uso da câmera. Tente outro navegador.");
-        return;
-      }
-
-      this.showQRCodeReader = true;
-
-      this.$nextTick(async () => {
-        try {
-          this.qrCodeScanner = new Html5Qrcode("qr-reader");
-          await this.qrCodeScanner.start(
-              { facingMode: "environment" },
-              { fps: 10, qrbox: { width: 250, height: 250 } },
-              (decodedText) => {
-                if (!this.isReading) {
-                  this.bipAudio.play();
-                  this.qrDetected = true;
-                  this.addProductToList(decodedText, "qrcode");
-
-                  this.isReading = true;
-                  setTimeout(() => {
-                    this.isReading = false;
-                    this.qrDetected = false;
-                  }, 3000);
-                }
-              },
-              (errorMessage) => {
-                console.warn("Erro ao ler QR Code:", errorMessage);
-              }
-          );
-        } catch (error) {
-          console.error("Erro ao iniciar o leitor de QR Code:", error);
-          alert("Não foi possível iniciar o leitor. Verifique as permissões.");
-          this.showQRCodeReader = false;
-        }
-      });
-    },
-
-    stopQRCodeReader() {
-      if (this.qrCodeScanner) {
-        this.qrCodeScanner
-            .stop()
-            .then(() => {
-              this.qrCodeScanner.clear();
-              this.qrCodeScanner = null;
-              this.showQRCodeReader = false;
-            })
-            .catch((error) => {
-              console.warn("Erro ao parar o leitor de QR Code:", error);
-              this.showQRCodeReader = false;
-            });
-      } else {
-        this.showQRCodeReader = false;
+    changePage(page) {
+      if (page > 0 && page <= this.totalPages) {
+        this.fetchCameras(page);
       }
     },
   },
-  async mounted() {
-    await this.fetchUserInformation();
-    await this.fetchProducts();
+  mounted() {
+    this.fetchUserInformation();
+    this.fetchCameras(this.currentPage);
   },
 };
 </script>
 
 <style scoped>
-.leitor-view {
+.camera-list {
   display: flex;
   height: 100vh;
+  background: #f8f9fa;
 }
 
 .main-content {
@@ -232,133 +150,112 @@ export default {
 }
 
 .header {
-  margin-bottom: 20px;
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: white;
-  border-radius: 5px;
-}
-
-.reader-options {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
 
-.reader-input {
-  flex: 1;
-  padding: 10px;
-  font-size: 16px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #007bff;
 }
 
-.reader-button {
-  padding: 10px 15px;
+.create-button {
+  padding: 10px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.create-button:hover {
+  background: #0056b3;
+}
+
+.table-container {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+.camera-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.camera-table th,
+.camera-table td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.camera-table th {
   background-color: #007bff;
   color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
 }
 
-.reader-button:hover {
-  background-color: #0056b3;
-}
-
-.qr-reader-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 20px;
-}
-
-.qr-container {
-  position: relative;
-  width: 250px;
-  height: 250px;
-  border: 2px solid #ddd;
-  border-radius: 10px;
-  overflow: hidden;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.qr-container.detected {
-  border-color: #00ff00;
-  box-shadow: 0 0 10px 4px rgba(0, 255, 0, 0.6);
-}
-
-.qr-overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 150px;
-  height: 150px;
-  border: 2px dashed rgba(0, 255, 0, 0.7);
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-
-.product-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 20px;
-}
-
-.product-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  transition: transform 0.3s ease;
-}
-
-.product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-}
-
-.product-image {
-  width: 100%;
-  height: 150px;
-  object-fit: cover;
-  border-bottom: 1px solid #eee;
-}
-
-.product-info {
-  padding: 15px;
-}
-
-.product-name {
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-.product-description {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 10px;
-}
-
-.remove-button {
+.edit-button,
+.delete-button {
   padding: 5px 10px;
-  background-color: #dc3545;
-  color: white;
   border: none;
   border-radius: 5px;
+  color: white;
   cursor: pointer;
+  margin-right: 5px;
 }
 
-.remove-button:hover {
+.edit-button {
+  background-color: #ffc107;
+}
+
+.edit-button:hover {
+  background-color: #e0a800;
+}
+
+.delete-button {
+  background-color: #dc3545;
+}
+
+.delete-button:hover {
   background-color: #c82333;
 }
 
-.no-products {
+.no-cameras {
   text-align: center;
   color: #666;
-  font-size: 16px;
+  margin-top: 20px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.pagination button {
+  padding: 10px 15px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.pagination button:disabled {
+  background: #ddd;
+  cursor: not-allowed;
+}
+
+.pagination span {
+  font-size: 1rem;
 }
 </style>

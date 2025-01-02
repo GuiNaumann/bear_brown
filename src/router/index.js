@@ -5,6 +5,7 @@ import DashboardView from "@/views/DashboardView.vue"; // Nova tela para Dashboa
 import LeitorView from "@/views/LeitorView.vue"; // Nova tela para Leitor
 import EditProductView from '@/views/EditProductView.vue';
 import CreateProductView from "@/views/CreateProductView.vue";
+import CreateCameraView from "@/views/CreateCameraView.vue";
 
 
 
@@ -33,6 +34,11 @@ const routes = [
         path: "/produtos/cadastrar",
         name: "CreateProduct",
         component: CreateProductView,
+    },
+    {
+        path: "/cameras/cadastrar",
+        name: "CreateCamera",
+        component: CreateCameraView,
     },
     {
         path: "/produtos/editar/:id",

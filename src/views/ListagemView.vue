@@ -1,44 +1,43 @@
 <template>
-  <div class="dashboard">
+  <div class="local-list">
     <!-- Barra lateral -->
-    <AppSidebar :user="user || placeholderUser" currentSection="Produtos" />
+    <AppSidebar :user="user || placeholderUser" currentSection="Locais" />
 
-    <!-- Área principal -->
+    <!-- Conteúdo principal -->
     <main class="main-content">
+      <!-- Cabeçalho -->
       <div class="header">
-        <h1>Produtos</h1>
-        <button class="create-button" @click="handleCreate">Cadastrar Novo</button>
+        <h1 class="title">Listagem de Locais</h1>
+        <button class="create-button" @click="handleCreate">Cadastrar Novo Local</button>
       </div>
-      <div class="product-grid">
-        <div v-for="item in items" :key="item.id" class="product-card">
-          <div class="image-container">
-            <img :src="item.imageURL" alt="Produto" class="product-image" />
-          </div>
-          <div class="product-info">
-            <h2 class="product-name">{{ item.name }}</h2>
-            <p class="product-description">{{ item.description }}</p>
-            <p class="product-price">
-              R$ {{ item.price ? item.price.toFixed(2) : "0.00" }}
-            </p>
-            <p class="product-size">Tamanho: {{ item.size }}</p>
-            <div class="product-actions">
-              <button class="edit-button" @click="handleEdit(item.id)">Editar</button>
-              <button class="delete-button" @click="handleDelete(item.id)">Excluir</button>
-            </div>
-          </div>
-        </div>
+
+      <!-- Tabela de Locais -->
+      <div class="table-container">
+        <table class="local-table">
+          <thead>
+          <tr>
+            <th>Nome do Local</th>
+            <th>Ações</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr v-for="local in locais" :key="local.id">
+            <td>{{ local.name }}</td>
+            <td class="actions">
+              <button class="edit-button" @click="handleEdit(local.id)">Editar</button>
+              <button class="delete-button" @click="handleDelete(local.id)">Excluir</button>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+        <p v-if="!locais.length" class="no-locais">Nenhum local cadastrado.</p>
       </div>
-      <p v-if="!items.length" class="no-products">Nenhum produto encontrado.</p>
 
       <!-- Paginação -->
       <div class="pagination" v-if="totalCount > itemsPerPage">
-        <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)">
-          Anterior
-        </button>
+        <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)">Anterior</button>
         <span>Página {{ currentPage }} de {{ totalPages }}</span>
-        <button :disabled="currentPage === totalPages" @click="changePage(currentPage + 1)">
-          Próximo
-        </button>
+        <button :disabled="currentPage === totalPages" @click="changePage(currentPage + 1)">Próximo</button>
       </div>
     </main>
   </div>
@@ -49,6 +48,7 @@ import AppSidebar from "@/components/Sidebar.vue";
 import axios from "axios";
 
 export default {
+  name: "LocalListView",
   components: { AppSidebar },
   data() {
     return {
@@ -57,10 +57,10 @@ export default {
         name: "Usuário Genérico",
         photo: "/generico.png",
       },
-      items: [],
-      totalCount: 0, // Total de itens
+      locais: [], // Lista de locais
+      totalCount: 0, // Total de locais
       currentPage: 1, // Página atual
-      itemsPerPage: 30, // Quantidade de itens por página
+      itemsPerPage: 10, // Itens por página
     };
   },
   computed: {
@@ -69,23 +69,20 @@ export default {
     },
   },
   methods: {
-    async fetchItems(page = 1) {
+    async fetchLocais(page = 1) {
       try {
-        const response = await axios.get("http://localhost:8080/private/product/list", {
+        const response = await axios.get("http://localhost:8080/private/locais", {
           params: {
             page,
             limit: this.itemsPerPage,
           },
           withCredentials: true,
         });
-        this.items = response.data.items.map((item) => ({
-          ...item,
-          price: item.price ?? 0, // Define preço como 0 se não estiver definido
-        }));
-        this.totalCount = response.data.totalCount; // Atualiza o total de itens
-        this.currentPage = page; // Define a página atual
+        this.locais = response.data.items;
+        this.totalCount = response.data.totalCount;
+        this.currentPage = page;
       } catch (error) {
-        console.error("Erro ao buscar itens:", error);
+        console.error("Erro ao buscar locais:", error);
       }
     },
     async fetchUserInformation() {
@@ -106,37 +103,36 @@ export default {
       this.$router.push("/produtos/cadastrar");
     },
     async handleEdit(id) {
-      this.$router.push({ name: "EditProduct", params: { id } });
+      this.$router.push({ name: "EditLocal", params: { id } });
     },
     async handleDelete(id) {
-      const confirmDelete = confirm("Deseja realmente excluir este item?");
+      const confirmDelete = confirm("Deseja realmente excluir este local?");
       if (confirmDelete) {
         try {
-          await axios.delete(`http://localhost:8080/private/product/delete/${id}`, {
+          await axios.delete(`http://localhost:8080/private/locais/delete/${id}`, {
             withCredentials: true,
           });
-          this.fetchItems(this.currentPage); // Recarrega os itens da página atual
+          this.fetchLocais(this.currentPage); // Recarrega a lista
         } catch (error) {
-          console.error("Erro ao excluir item:", error.response || error.message);
+          console.error("Erro ao excluir local:", error.response || error.message);
         }
       }
     },
     changePage(page) {
       if (page > 0 && page <= this.totalPages) {
-        this.fetchItems(page);
+        this.fetchLocais(page);
       }
     },
   },
   mounted() {
-    this.fetchItems(this.currentPage);
+    this.fetchLocais(this.currentPage);
     this.fetchUserInformation();
   },
 };
 </script>
 
 <style scoped>
-/* Estilos atualizados */
-.dashboard {
+.local-list {
   display: flex;
   height: 100vh;
   background: #f8f9fa;
@@ -153,6 +149,11 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
   color: #007bff;
 }
 
@@ -170,70 +171,39 @@ export default {
   background: #0056b3;
 }
 
-.product-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 20px;
-}
-
-.product-card {
+.table-container {
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+  padding: 20px;
 }
 
-.product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+.local-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
 }
 
-.image-container {
-  height: 200px;
-  background: #f0f0f0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.local-table th,
+.local-table td {
+  padding: 10px 15px;
+  border-bottom: 1px solid #ddd;
 }
 
-.product-image {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-}
-
-.product-info {
-  padding: 15px;
-}
-
-.product-name {
-  font-size: 18px;
+.local-table th {
+  background: #007bff;
+  color: white;
   font-weight: bold;
-  margin: 0;
 }
 
-.product-description {
-  font-size: 14px;
-  color: #666;
-  margin: 10px 0;
+.local-table tbody tr:hover {
+  background: #f9f9f9;
 }
 
-.product-price {
-  font-size: 16px;
-  font-weight: bold;
-  color: #007bff;
-}
-
-.product-size {
-  font-size: 14px;
-  color: #666;
-}
-
-.product-actions {
-  margin-top: 10px;
+.actions {
   display: flex;
-  justify-content: space-between;
+  gap: 10px;
 }
 
 .edit-button {
@@ -262,30 +232,35 @@ export default {
   background: #c82333;
 }
 
+.no-locais {
+  text-align: center;
+  color: #666;
+}
+
 .pagination {
   margin-top: 20px;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 20px;
+  gap: 10px;
 }
 
 .pagination button {
-  padding: 8px 12px;
+  padding: 10px 15px;
   background: #007bff;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  transition: background 0.3s ease;
 }
 
 .pagination button:disabled {
-  background: #ccc;
+  background: #ddd;
   cursor: not-allowed;
 }
 
 .pagination span {
-  font-size: 16px;
-  color: #333;
+  font-size: 1rem;
 }
 </style>

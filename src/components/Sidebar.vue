@@ -16,7 +16,7 @@
               class="menu-link"
               :class="{ active: $route.name === 'Dashboard' }"
           >
-            <i class="icon fa fa-Dashboard"></i> Dashboard
+            <i class="icon fa fa-video"></i> Monitoramento
           </router-link>
         </li>
         <li>
@@ -25,7 +25,7 @@
               class="menu-link"
               :class="{ active: $route.name === 'Produtos' }"
           >
-            <i class="icon fa fa-certificate"></i> Produtos
+            <i class="icon fa fa-map-marker"></i> Local
           </router-link>
         </li>
         <li>
@@ -34,7 +34,7 @@
               class="menu-link"
               :class="{ active: $route.name === 'Leitor' }"
           >
-            <i class="icon fa fa-users"></i> Leitor
+            <i class="icon fa fa-camera"></i> Câmera
           </router-link>
         </li>
       </ul>

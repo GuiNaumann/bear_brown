@@ -1,4 +1,4 @@
-# bear_brown
+# camera_brown
 
 ## Project setup
 ```

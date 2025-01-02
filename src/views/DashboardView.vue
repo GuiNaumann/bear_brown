@@ -1,59 +1,51 @@
 <template>
-  <div class="dashboard-container">
-    <!-- Barra lateral fixa -->
-    <AppSidebar :user="user || placeholderUser" currentSection="Dashboard" />
+  <div class="monitoramento-container">
+    <!-- Barra lateral -->
+    <AppSidebar :user="user || placeholderUser" currentSection="Monitoramento" />
 
     <!-- Conteúdo principal -->
     <main class="main-content">
       <!-- Cabeçalho -->
-        <h1 class="title">Dashboard</h1>
+      <h1 class="title">Monitoramento</h1>
 
-      <!-- Filtros de Data -->
-      <section class="date-filters">
+      <!-- Filtros -->
+      <section class="filters">
+        <!-- Filtro por nome -->
         <label>
-          Data de início:
-          <input type="date" v-model="startDate" @change="fetchDashboardData" />
+          Filtrar por nome:
+          <input type="text" v-model="search" @input="fetchMonitoramentoData" placeholder="Digite o nome da câmera" />
         </label>
+
+        <!-- Filtro por local -->
         <label>
-          Data final:
-          <input type="date" v-model="endDate" @change="fetchDashboardData" />
+          Filtrar por local:
+          <select v-model="selectedLocal" @change="fetchMonitoramentoData">
+            <option value="">Todos os locais</option>
+            <option v-for="(local, index) in locais" :key="index" :value="local.id">{{ local.name }}</option>
+          </select>
+        </label>
+
+        <!-- Número de telas -->
+        <label>
+          Número de telas:
+          <select v-model="screenCount" @change="fetchMonitoramentoData">
+            <option v-for="n in [1, 4, 8, 16, 32, 64]" :key="n" :value="n">{{ n }}</option>
+          </select>
         </label>
       </section>
 
-      <!-- Cards do Dashboard -->
-      <section class="dashboard-cards">
-        <div class="card" v-for="(item, index) in dashboardData" :key="index">
-          <h2>{{ item.title }}</h2>
-          <p>{{ item.value }}</p>
+      <section class="camera-grid" :style="gridStyle">
+        <div class="camera-box" v-for="(camera, index) in cameras" :key="index">
+          <h3>{{ camera.name }}</h3>
+          <video :src="camera.streamUrl" controls autoplay muted></video>
         </div>
       </section>
 
-      <!-- Gráfico de Vendas -->
-      <section class="chart-section">
-        <h3 class="section-title">Quantidade de Vendas</h3>
-        <canvas id="salesChart"></canvas>
-      </section>
-
-      <!-- Listagens -->
-      <section class="lists-section">
-        <!-- Produtos Mais Vendidos -->
-        <div class="list-container">
-          <h3 class="section-title">Produtos Mais Vendidos</h3>
-          <ul>
-            <li v-for="(product, index) in topSellingProducts" :key="index">
-              {{ product.name }} - {{ product.quantity }} unidades
-            </li>
-          </ul>
-        </div>
-
-        <!-- Vendas Recentes -->
-        <div class="list-container">
-          <h3 class="section-title">Vendas Recentes</h3>
-          <ul>
-            <li v-for="(sale, index) in recentSales" :key="index">
-              {{ sale.customer }} - {{ sale.total }} R$
-            </li>
-          </ul>
+      <!-- Grid de Câmeras -->
+      <section class="camera-grid" :style="gridStyle">
+        <div class="camera-box" v-for="(camera, index) in cameras" :key="index">
+          <h3>{{ camera.name }}</h3>
+          <video :src="camera.streamUrl" controls autoplay muted></video>
         </div>
       </section>
     </main>
@@ -63,10 +55,9 @@
 <script>
 import AppSidebar from "@/components/Sidebar.vue";
 import axios from "axios";
-import Chart from "chart.js/auto";
 
 export default {
-  name: "DashboardView",
+  name: "MonitoramentoView",
   components: { AppSidebar },
   data() {
     return {
@@ -75,26 +66,25 @@ export default {
         name: "Usuário Genérico",
         photo: "/generico.png",
       },
-      dashboardData: [
-        { title: "Produtos cadastrados", value: 0 },
-        { title: "Qtd produtos vendidos", value: 0 },
-        { title: "Qtd de estoque", value: 0 },
-        { title: "Valor de produtos cadastrados", value: 0 },
-        { title: "Valor de produtos vendidos", value: 0 },
-        { title: "Valor de estoque", value: 0 },
-      ],
-      topSellingProducts: [],
-      recentSales: [],
-      startDate: "",
-      endDate: "",
-      salesChart: null,
+      cameras: [], // Lista de câmeras
+      locais: [], // Lista de locais
+      selectedLocal: "", // ID do local selecionado
+      search: "", // Nome da câmera para filtrar
+      screenCount: 4, // Default para 4 telas
     };
   },
+  computed: {
+    gridStyle() {
+      const cols = Math.sqrt(this.screenCount);
+      return `grid-template-columns: repeat(${cols}, 1fr);`;
+    },
+  },
   methods: {
+    // Busca informações do usuário
     async fetchUserInformation() {
       try {
         const response = await axios.get("http://localhost:8080/personalInformation", {
-          withCredentials: true, // Permite envio de cookies
+          withCredentials: true,
         });
         this.user = {
           name: response.data.name || "Usuário Genérico",
@@ -105,194 +95,103 @@ export default {
         this.user = this.placeholderUser;
       }
     },
-
-    async fetchDashboardData() {
+    // Busca a lista de locais disponíveis
+    async fetchLocais() {
       try {
-        const params = { startDate: this.startDate, endDate: this.endDate };
-        const response = await axios.get("http://localhost:8080/private/dashboard", { params });
-        const data = response.data || {};
-
-        this.dashboardData = [
-          { title: "Produtos cadastrados", value: data.productsRegistered || 0 },
-          { title: "Qtd produtos vendidos", value: data.productsSold || 0 },
-          { title: "Qtd de estoque", value: data.stockQuantity || 0 },
-          { title: "Valor de produtos cadastrados", value: data.totalProductValue || 0 },
-          { title: "Valor de produtos vendidos", value: data.totalSalesValue || 0 },
-          { title: "Valor de estoque", value: data.stockValue || 0 },
-        ];
-
-        this.topSellingProducts = data.topSellingProducts || [];
-        this.recentSales = data.recentSales || [];
-        this.fetchSalesData();
+        const response = await axios.get("http://localhost:8080/private/locais");
+        this.locais = response.data || [];
       } catch (error) {
-        console.error("Erro ao buscar dados do Dashboard:", error);
-
-        this.dashboardData = [
-          { title: "Produtos cadastrados", value: 0 },
-          { title: "Qtd produtos vendidos", value: 0 },
-          { title: "Qtd de estoque", value: 0 },
-          { title: "Valor de produtos cadastrados", value: 0 },
-          { title: "Valor de produtos vendidos", value: 0 },
-          { title: "Valor de estoque", value: 0 },
-        ];
-
-        this.topSellingProducts = [];
-        this.recentSales = [];
-        this.renderSalesChart([], []);
+        console.error("Erro ao buscar locais:", error);
+        this.locais = [];
       }
     },
-
-    async fetchSalesData() {
+    // Busca os dados de monitoramento (câmeras)
+    async fetchMonitoramentoData() {
       try {
-        const response = await axios.get("http://localhost:8080/private/sales-quantity");
-        const salesData = response.data || [];
-
-        const labels = salesData.map((item) => item.date);
-        const values = salesData.map((item) => item.quantity);
-
-        this.renderSalesChart(labels, values);
+        const params = {
+          search: this.search,
+          localId: this.selectedLocal, // Filtro por local
+          screenCount: this.screenCount, // Quantidade de telas
+        };
+        const response = await axios.get("http://localhost:8080/private/monitoramento", { params });
+        this.cameras = response.data || [];
       } catch (error) {
-        console.error("Erro ao buscar dados do gráfico:", error);
-        this.renderSalesChart([], []);
+        console.error("Erro ao buscar dados de monitoramento:", error);
+        this.cameras = [];
       }
-    },
-
-    renderSalesChart(labels, values) {
-      const ctx = document.getElementById("salesChart");
-
-      if (this.salesChart) {
-        this.salesChart.destroy();
-      }
-
-      this.salesChart = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: "Quantidade de Vendas",
-              data: values,
-              backgroundColor: "rgba(54, 162, 235, 0.6)",
-              borderColor: "rgba(54, 162, 235, 1)",
-              borderWidth: 1,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: {beginAtZero: true},
-          },
-        },
-      });
     },
   },
   mounted() {
-    this.fetchUserInformation();
-    this.fetchDashboardData();
+    this.fetchUserInformation(); // Carrega informações do usuário
+    this.fetchLocais(); // Carrega a lista de locais
+    this.fetchMonitoramentoData(); // Carrega as câmeras
   },
 };
 </script>
 
 <style scoped>
-.dashboard-container {
+.monitoramento-container {
   display: flex;
   height: 100vh;
 }
 
+.camera-box {
+  background: #f5f5f5;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  padding: 10px;
+}
+
+.camera-box h3 {
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.camera-box video {
+  width: 100%;
+  border-radius: 5px;
+}
+
 .main-content {
-  margin-left: 250px; /* Compensa a largura da barra lateral */
-  margin-top: -150px;
-  padding: 150px; /* Adiciona espaçamento ao redor do conteúdo */
-  box-sizing: border-box; /* Garante que padding não afeta a largura */
-}
-
-/* Barra lateral fixa */
-.dashboard-container > :first-child {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 250px;
-  height: 100%;
-  background-color: #f5f5f5;
-  z-index: 1000;
-}
-
-/* Espaço reservado para barra lateral */
-.main-content {
-  margin-left: 250px;
-}
-
-/* Cabeçalho */
-.header {
-  margin-bottom: 20px;
-  padding: 10px 20px;
+  margin-left: 350px; /* Espaço para compensar a barra lateral */
+  padding: 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column; /* Organiza os elementos em coluna */
+  align-items: center; /* Centraliza horizontalmente */
+  justify-content: flex-start; /* Começa no topo */
+  height: 100vh; /* Usa toda a altura da tela */
 }
 
 .title {
   font-size: 2.5rem;
   font-weight: bold;
   color: #007bff;
-  text-align: left;
+  margin-bottom: 20px;
+  text-align: center; /* Centraliza o texto */
 }
 
-/* Filtros */
-.date-filters {
+.filters {
   display: flex;
-  justify-content: flex-start;
   gap: 20px;
   margin-bottom: 20px;
-  padding: 10px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  align-items: center; /* Alinha os itens ao centro */
+  justify-content: center; /* Centraliza os filtros */
 }
 
-/* Cards */
-.dashboard-cards {
+.filters input,
+.filters select {
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.camera-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-bottom: 20px;
+  gap: 10px;
+  justify-content: center; /* Centraliza o grid */
 }
 
-.card {
-  padding: 20px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  text-align: center;
-}
-
-/* Gráfico */
-.chart-section {
-  margin-top: 20px;
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.section-title {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #333;
-  text-align: left;
-  margin-bottom: 10px;
-}
-
-/* Listagens */
-.lists-section {
-  display: flex;
-  gap: 20px;
-  margin-top: 20px;
-}
-
-.list-container {
-  flex: 1;
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
 </style>
