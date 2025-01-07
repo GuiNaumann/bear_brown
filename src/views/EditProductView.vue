@@ -1,92 +1,70 @@
 <template>
   <div class="dashboard">
     <!-- Barra lateral -->
-    <AppSidebar :user="user || placeholderUser" currentSection="Produtos" />
+    <AppSidebar :user="user || placeholderUser" currentSection="Locais" />
 
     <!-- Conteúdo principal -->
     <main class="main-content">
       <div class="header">
-        <h1>Editar Produto</h1>
+        <h1>{{ isEditing ? "Editar Local" : "Cadastrar Novo Local" }}</h1>
       </div>
 
-      <!-- Formulário de Edição -->
-      <div class="form-container" v-if="product">
-        <form @submit.prevent="handleSubmit" class="product-form">
-          <!-- Nome do Produto -->
+      <!-- Formulário de Cadastro -->
+      <div class="form-container">
+        <form @submit.prevent="handleSubmit" class="local-form">
+          <!-- Nome do Local -->
           <div class="form-group">
-            <label for="name">Nome *</label>
+            <label for="name">Nome do Local *</label>
             <input
-                v-model="product.name"
+                v-model="local.name"
                 id="name"
-                placeholder="Digite o nome do produto"
+                placeholder="Digite o nome do local"
                 required
             />
           </div>
 
-          <!-- Quantidade e Preço -->
-          <div class="form-group-inline">
-            <div class="form-group">
-              <label for="quantity">Quantidade *</label>
-              <input
-                  v-model.number="product.quantity"
-                  id="quantity"
-                  type="number"
-                  placeholder="0"
-                  required
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="price">Preço *</label>
-              <input
-                  v-model.number="product.price"
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  required
-              />
-            </div>
+          <!-- Endereço -->
+          <div class="form-group">
+            <label for="address">Endereço *</label>
+            <input
+                v-model="local.address"
+                id="address"
+                placeholder="Digite o endereço do local"
+                required
+            />
           </div>
 
-          <!-- Tamanho -->
-          <div class="form-group">
-            <label for="size">Tamanho</label>
-            <select v-model="product.size" id="size">
-              <option v-for="size in sizes" :key="size" :value="size">
-                {{ size }}
-              </option>
-            </select>
+          <!-- Cidade e Estado -->
+          <div class="form-group-inline">
+            <div class="form-group">
+              <label for="city">Cidade *</label>
+              <input
+                  v-model="local.city"
+                  id="city"
+                  placeholder="Digite a cidade"
+                  required
+              />
+            </div>
+            <div class="form-group">
+              <label for="state">Estado *</label>
+              <select v-model="local.state" id="state" required>
+                <option value="" disabled>Selecione o estado</option>
+                <option v-for="state in states" :key="state" :value="state">
+                  {{ state }}
+                </option>
+              </select>
+            </div>
           </div>
 
           <!-- Descrição -->
           <div class="form-group">
             <label for="description">Descrição</label>
             <textarea
-                v-model="product.description"
+                v-model="local.description"
                 id="description"
                 placeholder="Digite uma descrição"
                 rows="3"
             ></textarea>
-          </div>
-
-          <!-- Foto do Produto -->
-          <div class="form-group upload-container">
-            <label for="image">Foto do Produto</label>
-            <div class="image-preview-container">
-              <img
-                  v-if="product.imageURL"
-                  :src="product.imageURL"
-                  alt="Foto do Produto"
-                  class="product-image-preview"
-              />
-            </div>
-            <input
-                type="file"
-                id="image"
-                @change="handleImageUpload"
-                class="file-input"
-            />
           </div>
 
           <!-- Botões -->
@@ -105,12 +83,6 @@
           </div>
         </form>
       </div>
-
-      <!-- Carregando ou erro -->
-      <div v-else>
-        <p v-if="isLoading">Carregando produto...</p>
-        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
-      </div>
     </main>
   </div>
 </template>
@@ -121,7 +93,7 @@ import AppSidebar from "@/components/Sidebar.vue";
 
 export default {
   components: { AppSidebar },
-  props: ["id"],
+  props: ["id"], // Recebe o ID como prop para edição
   data() {
     return {
       user: null,
@@ -129,12 +101,20 @@ export default {
         name: "Usuário Genérico",
         photo: "/generico.png",
       },
-      product: null,
-      sizes: ["PP", "P", "M", "G", "GG", "XG", "XGG"],
+      local: { name: "", address: "", city: "", state: "", description: "" },
+      states: [
+        "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
+        "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC",
+        "SP", "SE", "TO"
+      ],
       isLoading: false,
       errorMessage: "",
-      newImage: null, // Armazena a nova imagem carregada
     };
+  },
+  computed: {
+    isEditing() {
+      return !!this.id; // Verifica se está no modo de edição
+    },
   },
   methods: {
     async fetchUserInformation() {
@@ -151,39 +131,25 @@ export default {
         this.user = this.placeholderUser;
       }
     },
-    async fetchProductDetails() {
+    async fetchLocalData() {
+      if (!this.isEditing) return; // Apenas busca dados se for edição
+
+      this.isLoading = true;
       try {
-        this.isLoading = true;
-        const response = await axios.get(
-            `http://localhost:8080/private/product/get/${this.id}`,
-            { withCredentials: true }
-        );
-        this.product = response.data;
+        const response = await axios.get(`http://localhost:8080/private/camera/local/get/${this.id}`, {
+          withCredentials: true,
+        });
+        this.local = response.data; // Preenche o formulário com os dados recebidos
       } catch (error) {
-        this.errorMessage = "Erro ao carregar os detalhes do produto.";
-        console.error(error);
+        console.error("Erro ao buscar informações do local:", error);
+        this.errorMessage = "Erro ao carregar informações do local.";
       } finally {
         this.isLoading = false;
       }
     },
-    handleImageUpload(event) {
-      const file = event.target.files[0];
-      this.newImage = file;
-      if (file) {
-        this.product.imageURL = URL.createObjectURL(file); // Atualiza a pré-visualização
-      }
-    },
-    async convertFileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = (error) => reject(error);
-        reader.readAsDataURL(file);
-      });
-    },
     async handleSubmit() {
-      if (!this.product.name || !this.product.quantity || !this.product.price) {
-        this.errorMessage = "Preencha os campos obrigatórios!";
+      if (!this.local.name || !this.local.address || !this.local.city || !this.local.state) {
+        this.errorMessage = "Preencha todos os campos obrigatórios!";
         return;
       }
 
@@ -191,33 +157,35 @@ export default {
       this.errorMessage = "";
 
       try {
-        let imageBase64 = null;
-        if (this.newImage) {
-          imageBase64 = await this.convertFileToBase64(this.newImage);
-        }
-
         const payload = {
-          ...this.product,
-          imageBase64,
+          name: this.local.name,
+          address: this.local.address,
+          city: this.local.city,
+          state: this.local.state,
+          description: this.local.description,
         };
 
-        console.log("Payload enviado:", payload);
+        if (this.isEditing) {
+          await axios.post(
+              `http://localhost:8080/private/camera/local/update/${this.id}`,
+              payload,
+              { withCredentials: true }
+          );
+          alert("Local atualizado com sucesso!");
+        } else {
+          await axios.post(
+              "http://localhost:8080/private/camera/local/create",
+              payload,
+              { withCredentials: true }
+          );
+          alert("Local cadastrado com sucesso!");
+        }
 
-        await axios.post(
-            `http://localhost:8080/private/product/update/${this.id}`,
-            payload,
-            { withCredentials: true } // Envia cookies
-        );
-
-        alert("Produto atualizado com sucesso!");
+        this.local = { name: "", address: "", city: "", state: "", description: "" };
         this.$router.push("/produtos");
       } catch (error) {
-        if (error.response) {
-          console.error("Erro no servidor:", error.response.data);
-        } else {
-          console.error("Erro na requisição:", error.message);
-        }
-        this.errorMessage = "Erro ao atualizar o produto. Tente novamente.";
+        this.errorMessage = "Erro ao salvar local. Tente novamente.";
+        console.error(error);
       } finally {
         this.isLoading = false;
       }
@@ -226,23 +194,14 @@ export default {
       this.$router.push("/produtos");
     },
   },
-  async mounted() {
-    await this.fetchUserInformation();
-    await this.fetchProductDetails();
+  mounted() {
+    this.fetchUserInformation();
+    this.fetchLocalData(); // Busca os dados do local caso esteja no modo de edição
   },
 };
 </script>
 
 <style scoped>
-/* Mesmos estilos do cadastro, com adição para a pré-visualização de imagem */
-.product-image-preview {
-  width: 150px;
-  height: 150px;
-  object-fit: cover;
-  margin-bottom: 10px;
-  border-radius: 8px;
-}
-
 .dashboard {
   display: flex;
   height: 100vh;
@@ -273,7 +232,7 @@ h1 {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-.product-form {
+.local-form {
   display: flex;
   flex-direction: column;
   gap: 20px;

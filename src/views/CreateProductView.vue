@@ -6,7 +6,7 @@
     <!-- Conteúdo principal -->
     <main class="main-content">
       <div class="header">
-        <h1>Cadastrar Novo Local</h1>
+        <h1>{{ isEditing ? "Editar Local" : "Cadastrar Novo Local" }}</h1>
       </div>
 
       <!-- Formulário de Cadastro -->
@@ -93,6 +93,7 @@ import AppSidebar from "@/components/Sidebar.vue";
 
 export default {
   components: { AppSidebar },
+  props: ["id"], // Recebe o ID como prop
   data() {
     return {
       user: null,
@@ -101,16 +102,25 @@ export default {
         photo: "/generico.png",
       },
       local: { name: "", address: "", city: "", state: "", description: "" },
-      states: ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"],
+      states: [
+        "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
+        "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC",
+        "SP", "SE", "TO"
+      ],
       isLoading: false,
       errorMessage: "",
     };
+  },
+  computed: {
+    isEditing() {
+      return !!this.id; // Verifica se está no modo de edição
+    },
   },
   methods: {
     async fetchUserInformation() {
       try {
         const response = await axios.get("http://localhost:8080/personalInformation", {
-          withCredentials: true, // Permite envio de cookies
+          withCredentials: true,
         });
         this.user = {
           name: response.data.name || "Usuário Genérico",
@@ -121,7 +131,22 @@ export default {
         this.user = this.placeholderUser;
       }
     },
+    async fetchLocalData() {
+      if (!this.isEditing) return;
 
+      this.isLoading = true;
+      try {
+        const response = await axios.get(`http://localhost:8080/private/camera/local/${this.id}`, {
+          withCredentials: true,
+        });
+        this.local = response.data;
+      } catch (error) {
+        console.error("Erro ao buscar informações do local:", error);
+        this.errorMessage = "Erro ao carregar informações do local.";
+      } finally {
+        this.isLoading = false;
+      }
+    },
     async handleSubmit() {
       if (!this.local.name || !this.local.address || !this.local.city || !this.local.state) {
         this.errorMessage = "Preencha todos os campos obrigatórios!";
@@ -140,15 +165,26 @@ export default {
           description: this.local.description,
         };
 
-        await axios.post("http://localhost:8080/private/locais/create", payload, {
-          withCredentials: true, // Permite envio de cookies
-        });
-        alert("Local cadastrado com sucesso!");
+        if (this.isEditing) {
+          await axios.put(
+              `http://localhost:8080/private/camera/local/${this.id}`,
+              payload,
+              { withCredentials: true }
+          );
+          alert("Local atualizado com sucesso!");
+        } else {
+          await axios.post(
+              "http://localhost:8080/private/camera/local/create",
+              payload,
+              { withCredentials: true }
+          );
+          alert("Local cadastrado com sucesso!");
+        }
 
         this.local = { name: "", address: "", city: "", state: "", description: "" };
         this.$router.push("/produtos");
       } catch (error) {
-        this.errorMessage = "Erro ao cadastrar local. Tente novamente.";
+        this.errorMessage = "Erro ao salvar local. Tente novamente.";
         console.error(error);
       } finally {
         this.isLoading = false;
@@ -160,6 +196,7 @@ export default {
   },
   mounted() {
     this.fetchUserInformation();
+    this.fetchLocalData(); // Busca os dados do local caso esteja no modo de edição
   },
 };
 </script>

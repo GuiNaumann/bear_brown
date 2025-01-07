@@ -71,7 +71,7 @@ export default {
   methods: {
     async fetchLocais(page = 1) {
       try {
-        const response = await axios.get("http://localhost:8080/private/locais", {
+        const response = await axios.get("http://localhost:8080/private/camera/local/list", {
           params: {
             page,
             limit: this.itemsPerPage,
@@ -103,7 +103,7 @@ export default {
       this.$router.push("/produtos/cadastrar");
     },
     async handleEdit(id) {
-      this.$router.push({ name: "EditLocal", params: { id } });
+      this.$router.push({ name: "EditProduct", params: { id } });
     },
     async handleDelete(id) {
       const confirmDelete = confirm("Deseja realmente excluir este local?");

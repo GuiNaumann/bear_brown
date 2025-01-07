@@ -34,18 +34,12 @@
         </label>
       </section>
 
-      <section class="camera-grid" :style="gridStyle">
-        <div class="camera-box" v-for="(camera, index) in cameras" :key="index">
-          <h3>{{ camera.name }}</h3>
-          <video :src="camera.streamUrl" controls autoplay muted></video>
-        </div>
-      </section>
-
       <!-- Grid de Câmeras -->
       <section class="camera-grid" :style="gridStyle">
-        <div class="camera-box" v-for="(camera, index) in cameras" :key="index">
+        <div v-for="(camera, index) in cameras" :key="index" class="camera-box">
           <h3>{{ camera.name }}</h3>
-          <video :src="camera.streamUrl" controls autoplay muted></video>
+          <!-- Player configurado para RTSP -->
+          <video id="video-{{ index }}" class="video-js vjs-default-skin" controls autoplay muted></video>
         </div>
       </section>
     </main>
@@ -98,7 +92,9 @@ export default {
     // Busca a lista de locais disponíveis
     async fetchLocais() {
       try {
-        const response = await axios.get("http://localhost:8080/private/locais");
+        const response = await axios.get("http://localhost:8080/private/camera/local/list", {
+          withCredentials: true, // Inclui cookies na solicitação
+        });
         this.locais = response.data || [];
       } catch (error) {
         console.error("Erro ao buscar locais:", error);
@@ -113,12 +109,39 @@ export default {
           localId: this.selectedLocal, // Filtro por local
           screenCount: this.screenCount, // Quantidade de telas
         };
-        const response = await axios.get("http://localhost:8080/private/monitoramento", { params });
+        const response = await axios.get("http://localhost:8080/private/camera/list", {
+          params,
+          withCredentials: true, // Inclui cookies na solicitação
+        });
         this.cameras = response.data || [];
+        this.initializePlayers(); // Inicializa os players após carregar as câmeras
       } catch (error) {
         console.error("Erro ao buscar dados de monitoramento:", error);
         this.cameras = [];
       }
+    },
+    // Inicializa os players para cada câmera
+    initializePlayers() {
+      this.cameras.forEach((camera, index) => {
+        const videoElement = document.getElementById(`video-${index}`);
+        if (videoElement) {
+          const player = window.videojs(videoElement, {
+            controls: true,
+            autoplay: true,
+            muted: true,
+            preload: 'auto',
+            techOrder: ['html5'],
+            sources: [
+              {
+                src: camera.streamUrl,
+                type: 'application/x-mpegURL', // Ou 'rtsp' se suportado pelo player configurado
+              },
+            ],
+          });
+
+          player.play(); // Inicia o player
+        }
+      });
     },
   },
   mounted() {
@@ -193,5 +216,5 @@ export default {
   gap: 10px;
   justify-content: center; /* Centraliza o grid */
 }
-
 </style>
+

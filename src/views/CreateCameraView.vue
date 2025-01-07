@@ -96,9 +96,9 @@
 
           <!-- Local da Câmera -->
           <div class="form-group">
-            <label for="location">Local *</label>
-            <select v-model="camera.location" id="location" required>
-              <option v-for="local in locations" :key="local.id" :value="local.name">
+            <label for="localID">Local *</label>
+            <select v-model.number="camera.localID" id="localID" required>
+              <option v-for="local in locations" :key="local.id" :value="local.id">
                 {{ local.name }}
               </option>
             </select>
@@ -144,7 +144,7 @@ export default {
         password: "",
         streamPath: "",
         cameraType: "Intelbras",
-        location: "",
+        localID: null, // Alterado para aceitar ID do local
       },
       locations: [],
       isLoading: false,
@@ -168,7 +168,7 @@ export default {
     },
     async fetchLocations() {
       try {
-        const response = await axios.get("http://localhost:8080/private/location/list", {
+        const response = await axios.get("http://localhost:8080/private/camera/local/list", {
           withCredentials: true,
         });
         this.locations = response.data.items || [];
@@ -177,7 +177,16 @@ export default {
       }
     },
     async handleSubmit() {
-      if (!this.camera.name || !this.camera.ipAddress || !this.camera.port || !this.camera.username || !this.camera.password || !this.camera.streamPath || !this.camera.cameraType || !this.camera.location) {
+      if (
+          !this.camera.name ||
+          !this.camera.ipAddress ||
+          !this.camera.port ||
+          !this.camera.username ||
+          !this.camera.password ||
+          !this.camera.streamPath ||
+          !this.camera.cameraType ||
+          !this.camera.localID
+      ) {
         this.errorMessage = "Preencha todos os campos obrigatórios!";
         return;
       }
@@ -186,13 +195,24 @@ export default {
       this.errorMessage = "";
 
       try {
-        await axios.post("http://localhost:8080/private/camera/create", this.camera, {
-          withCredentials: true,
-        });
+        await axios.post(
+            "http://localhost:8080/private/camera/create",
+            this.camera,
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+              withCredentials: true,
+            }
+        );
         alert("Câmera cadastrada com sucesso!");
         this.$router.push("/leitor");
       } catch (error) {
-        this.errorMessage = "Erro ao cadastrar câmera. Tente novamente.";
+        if (error.response && error.response.status === 401) {
+          this.errorMessage = "Não autorizado. Verifique suas credenciais.";
+        } else {
+          this.errorMessage = "Erro ao cadastrar câmera. Tente novamente.";
+        }
         console.error(error);
       } finally {
         this.isLoading = false;

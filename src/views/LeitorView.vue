@@ -18,7 +18,8 @@
           <tr>
             <th>Nome</th>
             <th>Endereço IP</th>
-            <th>Local</th>
+            <th>Porta</th>
+            <th>Usuário</th>
             <th>Ações</th>
           </tr>
           </thead>
@@ -26,7 +27,8 @@
           <tr v-for="camera in cameras" :key="camera.id">
             <td>{{ camera.name }}</td>
             <td>{{ camera.ipAddress }}</td>
-            <td>{{ camera.location }}</td>
+            <td>{{ camera.port }}</td>
+            <td>{{ camera.username }}</td>
             <td>
               <button class="edit-button" @click="handleEdit(camera.id)">Editar</button>
               <button class="delete-button" @click="handleDelete(camera.id)">Excluir</button>
@@ -94,7 +96,7 @@ export default {
       this.$router.push("/cameras/cadastrar");
     },
     async handleEdit(cameraId) {
-      this.$router.push({ name: "EditCamera", params: { id: cameraId } });
+      this.$router.push({name: "EditCamera", params: {id: cameraId}});
     },
     async handleDelete(cameraId) {
       const confirmDelete = confirm("Deseja realmente excluir esta câmera?");
