@@ -1,31 +1,31 @@
 <template>
   <div class="monitoramento-container">
-    <!-- Barra lateral -->
     <AppSidebar :user="user || placeholderUser" currentSection="Monitoramento" />
 
-    <!-- Conteúdo principal -->
     <main class="main-content">
-      <!-- Cabeçalho -->
       <h1 class="title">Monitoramento</h1>
 
-      <!-- Filtros -->
       <section class="filters">
-        <!-- Filtro por nome -->
         <label>
           Filtrar por nome:
-          <input type="text" v-model="search" @input="fetchMonitoramentoData" placeholder="Digite o nome da câmera" />
+          <input
+              type="text"
+              v-model="search"
+              @input="fetchMonitoramentoData"
+              placeholder="Digite o nome da câmera"
+          />
         </label>
 
-        <!-- Filtro por local -->
         <label>
           Filtrar por local:
           <select v-model="selectedLocal" @change="fetchMonitoramentoData">
             <option value="">Todos os locais</option>
-            <option v-for="(local, index) in locais" :key="index" :value="local.id">{{ local.name }}</option>
+            <option v-for="(local, index) in locais" :key="index" :value="local.id">
+              {{ local.name }}
+            </option>
           </select>
         </label>
 
-        <!-- Número de telas -->
         <label>
           Número de telas:
           <select v-model="screenCount" @change="fetchMonitoramentoData">
@@ -34,12 +34,17 @@
         </label>
       </section>
 
-      <!-- Grid de Câmeras -->
       <section class="camera-grid" :style="gridStyle">
         <div v-for="(camera, index) in cameras" :key="index" class="camera-box">
           <h3>{{ camera.name }}</h3>
-          <!-- Player configurado para RTSP -->
-          <video id="video-{{ index }}" class="video-js vjs-default-skin" controls autoplay muted></video>
+          <!-- Reproduz o HLS -->
+          <video
+              id="video-{{ index }}"
+              class="video-js vjs-default-skin"
+              controls
+              autoplay
+              muted
+          ></video>
         </div>
       </section>
     </main>
@@ -49,6 +54,7 @@
 <script>
 import AppSidebar from "@/components/Sidebar.vue";
 import axios from "axios";
+import Hls from "hls.js";
 
 export default {
   name: "MonitoramentoView",
@@ -60,11 +66,11 @@ export default {
         name: "Usuário Genérico",
         photo: "/generico.png",
       },
-      cameras: [], // Lista de câmeras
-      locais: [], // Lista de locais
-      selectedLocal: "", // ID do local selecionado
-      search: "", // Nome da câmera para filtrar
-      screenCount: 4, // Default para 4 telas
+      cameras: [],
+      locais: [],
+      selectedLocal: "",
+      search: "",
+      screenCount: 4,
     };
   },
   computed: {
@@ -74,7 +80,6 @@ export default {
     },
   },
   methods: {
-    // Busca informações do usuário
     async fetchUserInformation() {
       try {
         const response = await axios.get("http://localhost:8080/personalInformation", {
@@ -89,11 +94,10 @@ export default {
         this.user = this.placeholderUser;
       }
     },
-    // Busca a lista de locais disponíveis
     async fetchLocais() {
       try {
         const response = await axios.get("http://localhost:8080/private/camera/local/list", {
-          withCredentials: true, // Inclui cookies na solicitação
+          withCredentials: true,
         });
         this.locais = response.data || [];
       } catch (error) {
@@ -101,53 +105,53 @@ export default {
         this.locais = [];
       }
     },
-    // Busca os dados de monitoramento (câmeras)
     async fetchMonitoramentoData() {
       try {
         const params = {
           search: this.search,
-          localId: this.selectedLocal, // Filtro por local
-          screenCount: this.screenCount, // Quantidade de telas
+          localId: this.selectedLocal,
+          screenCount: this.screenCount,
         };
         const response = await axios.get("http://localhost:8080/private/camera/list", {
           params,
-          withCredentials: true, // Inclui cookies na solicitação
+          withCredentials: true,
         });
-        this.cameras = response.data || [];
-        this.initializePlayers(); // Inicializa os players após carregar as câmeras
+        this.cameras = response.data.items || [];
+        this.initializePlayers();
       } catch (error) {
         console.error("Erro ao buscar dados de monitoramento:", error);
         this.cameras = [];
       }
     },
-    // Inicializa os players para cada câmera
     initializePlayers() {
       this.cameras.forEach((camera, index) => {
         const videoElement = document.getElementById(`video-${index}`);
         if (videoElement) {
-          const player = window.videojs(videoElement, {
-            controls: true,
-            autoplay: true,
-            muted: true,
-            preload: 'auto',
-            techOrder: ['html5'],
-            sources: [
-              {
-                src: camera.streamUrl,
-                type: 'application/x-mpegURL', // Ou 'rtsp' se suportado pelo player configurado
-              },
-            ],
-          });
+          const streamUrl = camera.streamUrl; // URL do HLS gerada no backend
 
-          player.play(); // Inicia o player
+          if (Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(streamUrl);
+            hls.attachMedia(videoElement);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              videoElement.play();
+            });
+          } else if (videoElement.canPlayType("application/vnd.apple.mpegurl")) {
+            videoElement.src = streamUrl;
+            videoElement.addEventListener("loadedmetadata", () => {
+              videoElement.play();
+            });
+          } else {
+            console.error(`O navegador não suporta HLS para a câmera: ${camera.name}`);
+          }
         }
       });
     },
   },
   mounted() {
-    this.fetchUserInformation(); // Carrega informações do usuário
-    this.fetchLocais(); // Carrega a lista de locais
-    this.fetchMonitoramentoData(); // Carrega as câmeras
+    this.fetchUserInformation();
+    this.fetchLocais();
+    this.fetchMonitoramentoData();
   },
 };
 </script>
@@ -217,4 +221,3 @@ export default {
   justify-content: center; /* Centraliza o grid */
 }
 </style>
-
